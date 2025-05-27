@@ -1,6 +1,4 @@
 # file: car_price_tool.py
-import
-
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, lit
 from pyspark.ml.feature import StringIndexer, VectorAssembler
