@@ -1,7 +1,5 @@
 # file: car_price_tool.py
-import os
-os.environ["PYSPARK_PYTHON"] = r"C:/Users/LENOVO/AppData/Local/Programs/Python/Python39/python.exe"
-os.environ["PYSPARK_DRIVER_PYTHON"] = r"C:/Users/LENOVO/AppData/Local/Programs/Python/Python39/python.exe"
+import
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, lit
