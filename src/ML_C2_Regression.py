@@ -5,6 +5,8 @@ from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.regression import LinearRegression, RandomForestRegressor
 from pyspark.ml.evaluation import RegressionEvaluator
 import builtins
+#
+import matplotlib.pyplot as plt
 
 def main():
    # 1. Tạo SparkSession với thêm driver memory
@@ -12,6 +14,7 @@ def main():
        .appName("CarPriceEstimatorCLI") \
        .config("spark.driver.memory", "4g") \
        .getOrCreate()
+   spark.sparkContext.setLogLevel("ERROR")
 
 
    # 2. Đọc dữ liệu và drop NULL
@@ -75,7 +78,10 @@ def main():
        metrics[name] = (rmse, mae, r2)
        print(f"{name:17s} → RMSE={rmse:.2f}, MAE={mae:.2f}, R2={r2:.2f}")
 
-
+       print("\nGiải thích các chỉ số đánh giá:")
+       print("- RMSE (Root Mean Squared Error): Sai số bình phương trung bình, càng nhỏ càng tốt.")
+       print("- MAE (Mean Absolute Error): Sai số tuyệt đối trung bình, càng nhỏ càng tốt.")
+       print("- R² (R-squared): Mức độ giải thích của mô hình với dữ liệu, càng gần 1 càng tốt.\n")
    # 10. Chọn best_model
    models = {
    "LinearRegression": lr_model,
@@ -83,14 +89,77 @@ def main():
    }
 
 
-   best_name = builtins.min(metrics, key=lambda k: metrics[k][0])  # tên model có RMSE nhỏ nhất
+   best_name = min(metrics, key=lambda k: metrics[k][0])  # tên model có RMSE nhỏ nhất
    best_model = models[best_name]
-   print(f"\n⭐️  Best model: {best_name}\n")
+   print(f"\nBest model: {best_name}\n")
 
+    # 11. Trực quan hóa kết quả so sánh giữa các mô hình
+   
 
+    # Tách giá trị đánh giá thành 3 list
+        # 11. Trực quan hóa kết quả so sánh giữa các mô hình
+   model_names = list(metrics.keys())
+   rmse_values = [metrics[m][0] for m in model_names]
+   mae_values  = [metrics[m][1] for m in model_names]
+   r2_values   = [metrics[m][2] for m in model_names]
 
+# RMSE
+   plt.figure(figsize=(6,4))
+   plt.bar(model_names, rmse_values)
+   plt.title("So sánh RMSE giữa các mô hình")
+   plt.ylabel("RMSE (thấp hơn tốt hơn)")
+   plt.grid(axis='y')
+   plt.show()
 
+# MAE
+   plt.figure(figsize=(6,4))
+   plt.bar(model_names, mae_values, color='orange')
+   plt.title("So sánh MAE giữa các mô hình")
+   plt.ylabel("MAE (thấp hơn tốt hơn)")
+   plt.grid(axis='y')
+   plt.show()
+
+# R2
+   plt.figure(figsize=(6,4))
+   plt.bar(model_names, r2_values, color='green')
+   plt.title("So sánh R² giữa các mô hình")
+   plt.ylabel("R² (cao hơn tốt hơn)")
+   plt.ylim(0, 1)
+   plt.grid(axis='y')
+   plt.show()
+   
    # 11. CLI predict
+   print("=== Car Price Estimator CLI ===")
+   while True:
+       year_in = input("Năm sản xuất (exit để thoát): ").strip()
+       if year_in.lower() == "exit": break
+       
+       odo_in = input("Odometer (km): ").strip()
+       if odo_in.lower() == "exit": break
+       
+       cond_in = input("Condition (1–5): ").strip()
+       if cond_in.lower() == "exit": break
+       
+       make_in = input("Hãng xe: ").strip()
+       if make_in.lower() == "exit": break
+
+       try:
+           year, odo, cond = int(year_in), float(odo_in), float(cond_in)
+       except:
+           print("Sai định dạng, thử lại.\n")
+           continue
+
+       car_age = 2025 - year
+       tmp = spark.createDataFrame([(make_in,)], ["make"])
+       make_idx = make_indexer.transform(tmp).first().makeIndex
+       new_df = spark.createDataFrame(
+           [(float(car_age), odo, cond, make_idx)],
+           ["car_age", "odometer", "condition", "makeIndex"]
+       )
+       feat = assembler.transform(new_df)
+       pred = best_model.transform(feat).first().prediction
+       print(f"→ Dựa trên mô hình Random Forest, giá dự báo của xe bạn vừa nhập là: {pred:,.0f} USD\n")
+       # 11. CLI predict
    print("=== Car Price Estimator CLI ===")
    while True:
        year_in = input("Năm sản xuất (exit để thoát): ").strip()
@@ -101,7 +170,7 @@ def main():
        try:
            year, odo, cond = int(year_in), float(odo_in), float(cond_in)
        except:
-           print("⚠️  Sai định dạng, thử lại.\n"); continue
+           print(" Sai định dạng, vui lòng thử lại.\n"); continue
 
 
        car_age = 2025 - year
@@ -113,14 +182,10 @@ def main():
        )
        feat = assembler.transform(new_df)
        pred = best_model.transform(feat).first().prediction
-       print(f"→ Estimated price: {pred:,.0f} USD\n")
-
-
-   spark.stop()
-
-
-if __name__=="__main__":
-   main()
-
+       print(f"→ Dựa trên mô hình Random Forest, giá dự báo của xe bạn vừa nhập là: {pred:,.0f} USD\n")
+       print("=== Cảm ơn bạn đã sử dụng! ===") 
+       
+if __name__ == "__main__":
+    main()
 
 
