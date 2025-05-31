@@ -8,16 +8,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
 
-
-
-
-
 def main():
     spark = SparkSession.builder \
-        .appName("CarPriceImprovedML") \
-        .config("spark.driver.memory", "4g") \
+        .appName("CarPriceRegression") \
+        .config("spark.driver.bindAddress", "127.0.0.1") \
+        .config("spark.driver.host", "localhost") \
         .getOrCreate()
-    spark.sparkContext.setLogLevel("ERROR")
 
 
     # Đọc dữ liệu và xử lý các giá trị thiếu
