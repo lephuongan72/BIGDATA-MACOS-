@@ -1,11 +1,30 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import to_timestamp, regexp_replace, year
 
-# Khởi tạo SparkSession (nếu chưa có)
-spark = SparkSession.builder.appName("Car Prices").config("spark.sql.legacy.timeParserPolicy", "LEGACY").getOrCreate()
 
-# Đọc file CSV
-df = spark.read.option("header", True).option("inferSchema", True).csv("car_prices.csv")
+
+# Khởi tạo SparkSession
+spark = SparkSession.builder \
+    .appName("Car Price SQL Query") \
+    .getOrCreate()
+    
+# Tạm thời dùng chế độ phân tích thời gian cũ
+spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
+
+# Đọc dữ liệu từ CSV
+df = spark.read.csv("car_prices.csv", header=True, inferSchema=True)
+
+# Tạo TempView để dùng trong Spark SQL
+df.createOrReplaceTempView("car_prices")
+
+# Truy vấn SQL ví dụ
+query10 = """
+SELECT * FROM car_prices LIMIT 10
+"""
+
+# Thực thi truy vấn và hiển thị
+spark.sql(query10).show()
+
 
 # Làm sạch saledate: bỏ phần "GMT-0800 (PST)"
 df_cleaned = df.withColumn(
